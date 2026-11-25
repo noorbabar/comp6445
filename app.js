@@ -157,7 +157,7 @@ function linkify(root) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const node of nodes) {
-    if (node.parentNode.closest(".t, code, pre")) continue;
+    if (node.parentNode.closest(".t, code, pre, svg, th")) continue;
     const text = node.nodeValue; let m, last = 0, frag = null;
     TERM_RE.lastIndex = 0;
     while ((m = TERM_RE.exec(text))) {

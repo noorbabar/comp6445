@@ -73,13 +73,27 @@ pre { background: #f2f2f2; padding: 10px 12px; overflow-x: auto; font-size: 13px
 pre code { background: none; padding: 0; }
 .muted { color: #666; }
 
-@media (max-width: 600px) {
-  .wtitle h2 { font-size: 22px; }
-  .card { padding: 20px; }
-}
+.notes table { border-collapse: collapse; width: 100%; margin: 0 0 16px; font-size: 14px; display: block; overflow-x: auto; }
+.notes td code { word-break: break-all; }
+.notes th, .notes td { border: 1px solid #111; padding: 6px 8px; text-align: left; vertical-align: top; }
+.notes th { background: #111; color: #fff; font-weight: 600; }
+.notes figure { margin: 0 0 16px; }
+.notes figure img, .notes figure svg { max-width: 100%; height: auto; }
+.notes figcaption { font-size: 13px; color: #666; margin-top: 4px; }
 
 .t { border-bottom: 1px dotted #111; cursor: help; }
 .t:hover { background: #111; color: #fff; }
 #tip { position: fixed; display: none; z-index: 10; max-width: 320px; background: #fff; color: #111;
   border: 1px solid #111; box-shadow: 3px 3px 0 #111; padding: 10px 12px; font-size: 13px; line-height: 1.5; pointer-events: none; }
 #tip p { margin: 4px 0 0; }
+
+.weeks { display: grid; grid-template-columns: repeat(9, 1fr); }
+.weeks button { min-width: 0; padding: 8px 0; }
+
+@media (max-width: 600px) {
+  .weeks button { font-size: 13px; }
+  .tabs button { padding: 10px 8px; font-size: 14px; }
+  .tabs button span { display: none; }
+}
+.tabs { scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
