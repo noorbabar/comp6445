@@ -77,3 +77,9 @@ pre code { background: none; padding: 0; }
   .wtitle h2 { font-size: 22px; }
   .card { padding: 20px; }
 }
+
+.t { border-bottom: 1px dotted #111; cursor: help; }
+.t:hover { background: #111; color: #fff; }
+#tip { position: fixed; display: none; z-index: 10; max-width: 320px; background: #fff; color: #111;
+  border: 1px solid #111; box-shadow: 3px 3px 0 #111; padding: 10px 12px; font-size: 13px; line-height: 1.5; pointer-events: none; }
+#tip p { margin: 4px 0 0; }
