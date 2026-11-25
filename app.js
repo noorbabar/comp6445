@@ -70,6 +70,7 @@ function draw() {
 
 function drawNotes(html) {
   $("body").innerHTML = html ? `<div class="notes">${html}</div>` : `<div class="empty">No notes yet.</div>`;
+  linkify($("body"));
 }
 
 function drawCards(cards) {
@@ -82,6 +83,7 @@ function drawCards(cards) {
       : `<div class="q">${c[0]}</div><div class="hint">Tap to flip</div>`}</div>
     <div class="ctl"><button class="btn" id="prev">← Back</button><span class="sp"></span><button class="btn" id="next">Next →</button></div>`;
   const move = (d) => { deck.pos = (deck.pos + d + cards.length) % cards.length; deck.flipped = false; drawCards(cards); };
+  linkify($("card"));
   $("card").onclick = () => { deck.flipped = !deck.flipped; drawCards(cards); };
   $("prev").onclick = () => move(-1);
   $("next").onclick = () => move(1);
@@ -142,5 +144,54 @@ function md(src) {
   flush(); if (code) out.push("</code></pre>");
   return out.join("");
 }
+
+const G = window.GLOSSARY || { items: [], terms: [] };
+const ITEM = new Map(G.items.map((it, i) => [it[0], i]));
+const TERM_MAP = new Map(G.terms.map(([word, name]) => [word, ITEM.get(name)]));
+const TERM_RE = G.terms.length ? new RegExp("(?<![A-Za-z0-9_$\\\\./-])(" +
+  G.terms.map(([f]) => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")(?![A-Za-z0-9_])", "g") : null;
+
+function linkify(root) {
+  if (!TERM_RE || !root) return;
+  const seen = new Set(), nodes = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    if (node.parentNode.closest(".t, code, pre")) continue;
+    const text = node.nodeValue; let m, last = 0, frag = null;
+    TERM_RE.lastIndex = 0;
+    while ((m = TERM_RE.exec(text))) {
+      const i = TERM_MAP.get(m[1]);
+      if (i === undefined || seen.has(i)) continue;   
+      seen.add(i);
+      frag = frag || document.createDocumentFragment();
+      frag.append(text.slice(last, m.index));
+      const s = document.createElement("span");
+      s.className = "t"; s.dataset.g = i; s.textContent = m[1];
+      frag.append(s); last = m.index + m[1].length;
+    }
+    if (frag) { frag.append(text.slice(last)); node.replaceWith(frag); }
+  }
+}
+
+const tip = document.createElement("div");
+tip.id = "tip";
+document.body.appendChild(tip);
+function showTip(el) {
+  const [name, what, why] = G.items[+el.dataset.g];
+  tip.innerHTML = `<b>${esc(name)}</b><p>${esc(what)}</p><p><i>Why it matters:</i> ${esc(why)}</p>`;
+  tip.style.display = "block";
+  const r = el.getBoundingClientRect();
+  tip.style.left = Math.min(Math.max(8, r.left), window.innerWidth - tip.offsetWidth - 8) + "px";
+  tip.style.top = (r.bottom + 8 + tip.offsetHeight < window.innerHeight ? r.bottom + 8 : r.top - tip.offsetHeight - 8) + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+document.addEventListener("mouseover", (e) => { const t = e.target.closest(".t"); if (t) showTip(t); });
+document.addEventListener("mouseout", (e) => { if (e.target.closest(".t")) hideTip(); });
+document.addEventListener("click", (e) => {            
+  const t = e.target.closest(".t");
+  if (t) { e.stopPropagation(); showTip(t); } else hideTip();
+}, true);
+window.addEventListener("scroll", hideTip);
 
 draw();
