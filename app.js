@@ -1,3 +1,5 @@
+const TUT_LOCKED = [10]; 
+
 const WEEKS = {
   1:  { title: "Foundations and acquisition" },
   2:  { title: "File systems" },
@@ -89,13 +91,15 @@ function drawCards(cards) {
   $("next").onclick = () => move(1);
 }
 
-function drawTutorial() {
-  const pub = (window.TUTORIALS || {})[view.week];
-  const mine = unlocked && unlocked.find((f) => f.name.replace(/\\/g, "/") === `wk${view.week}/tut.md`);
-  const hasLocked = (window.TUTORIAL_LOCKED || []).includes(view.week);
+async function drawTutorial() {
+  const week = view.week;
+  let pub = "";
+  try { const r = await fetch(`tutorials/wk${week}.md`); if (r.ok) pub = await r.text(); } catch (e) {}
+  if (view.week !== week || view.tab !== "tutorial") return;   // user clicked away while loading
+  const mine = unlocked && unlocked.find((f) => f.name.replace(/\\/g, "/") === `tut${week}.md`);
   let html = pub ? `<div class="notes">${md(pub)}</div>` : `<div class="empty">No notes yet.</div>`;
   if (mine) html += `<hr><p><button class="btn" id="lock">Lock</button></p><div class="notes">${md(mine.text)}</div>`;
-  else if (hasLocked && window.PRIVATE) html += `<hr><div class="locked"><h4>Locked</h4>
+  else if (TUT_LOCKED.includes(week) && window.PRIVATE) html += `<hr><div class="locked"><h4>Locked</h4>
       <p class="muted">The worked sample exam answers are course material, so they're locked.</p>
       <form id="unlock"><input type="password" placeholder="Passphrase" autocomplete="current-password">
       <button class="btn dark">Unlock</button><span class="muted" id="msg"></span></form></div>`;
@@ -114,8 +118,8 @@ function drawLocked(tabId) {
     if (unlocked) {
         const path = (f) => f.name.replace(/\\/g, "/");
         const files = tabId === "report"
-        ? unlocked.filter((f) => path(f).startsWith("reports/"))
-        : unlocked.filter((f) => path(f) === `wk${view.week}/${tabId === "tutorial" ? "tut" : "ctf"}.md`);
+        ? unlocked.filter((f) => path(f) === "report.md")
+        : unlocked.filter((f) => path(f) === `ctf${view.week}.md`);
         $("body").innerHTML = `<p><button class="btn" id="lock">Lock</button></p>` + (files.length
         ? files.map((f) => `<div class="notes">${md(f.text)}</div>`).join("<hr>")
         : `<div class="empty">Nothing here yet.</div>`);
@@ -151,9 +155,7 @@ async function decrypt(p, pass) {
 
 function md(src) {
   const out = []; let list = null, code = false, para = [], table = null;
-  const inline = (t) => esc(t)
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  const inline = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\[\[([^\]]+)\]\]/g, "<mark>$1</mark>");
   const endList = () => { if (list) { out.push(`</${list}>`); list = null; } };
   const endTable = () => { if (table) { out.push(table.join("") + "</table>"); table = null; } };
   const flush = () => { if (para.length) { out.push(`<p>${inline(para.join(" "))}</p>`); para = []; } endList(); endTable(); };
