@@ -12,16 +12,15 @@ const WEEKS = {
 
 const TABS = [
   { id: "professional", label: "Professional", sub: "Monday" },
-  { id: "practice",     label: "Practice",     sub: "Wednesday" },
-  { id: "tutorial",     label: "Tutorial",     sub: "Locked" },
+  { id: "technical",    label: "Technical",    sub: "Wednesday" },
+  { id: "tutorial",     label: "Tutorial",     sub: "Lab" },
   { id: "ctf",          label: "CTF",          sub: "Locked" },
   { id: "report",       label: "Report",       sub: "Locked" },
 ];
 
 const LOCKED = {
-  tutorial: "idk if i can share these but to be safer its hidden",
-  ctf:      "flags are hidden and so are the challenge qs per course policy",
-  report:   "my reports, for future ref",
+  ctf:      "ctf writeups",
+  report:   "reports 1 and 2",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -55,7 +54,7 @@ function draw() {
       `<button data-tab="${t.id}" class="${t.id === tab.id ? "on" : ""}">${t.label}<span>${t.sub}</span></button>`).join("")}</div>
     <div class="shead">
       <div class="meta"></div>
-      ${isLocked ? "" : `<div class="switch">
+      ${isLocked || tab.id === "tutorial" ? "" : `<div class="switch">
         <button data-mode="notes" class="${view.mode === "notes" ? "on" : ""}">Notes</button>
         <button data-mode="cards" class="${view.mode === "cards" ? "on" : ""}">Flashcards</button></div>`}
     </div>
@@ -64,6 +63,7 @@ function draw() {
   $("main").querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => { deck = { pos: 0, flipped: false }; go({ mode: b.dataset.mode }); });
 
   if (isLocked) drawLocked(tab.id);
+  else if (tab.id === "tutorial") drawTutorial();
   else if (view.mode === "cards") drawCards(section(view.week, tab.id).cards || []);
   else drawNotes(section(view.week, tab.id).notes);
 }
@@ -89,6 +89,27 @@ function drawCards(cards) {
   $("next").onclick = () => move(1);
 }
 
+function drawTutorial() {
+  const pub = (window.TUTORIALS || {})[view.week];
+  const mine = unlocked && unlocked.find((f) => f.name.replace(/\\/g, "/") === `wk${view.week}/tut.md`);
+  const hasLocked = (window.TUTORIAL_LOCKED || []).includes(view.week);
+  let html = pub ? `<div class="notes">${md(pub)}</div>` : `<div class="empty">No notes yet.</div>`;
+  if (mine) html += `<hr><p><button class="btn" id="lock">Lock</button></p><div class="notes">${md(mine.text)}</div>`;
+  else if (hasLocked && window.PRIVATE) html += `<hr><div class="locked"><h4>Locked</h4>
+      <p class="muted">The worked sample exam answers are course material, so they're locked.</p>
+      <form id="unlock"><input type="password" placeholder="Passphrase" autocomplete="current-password">
+      <button class="btn dark">Unlock</button><span class="muted" id="msg"></span></form></div>`;
+  $("body").innerHTML = html;
+  linkify($("body"));
+  if ($("lock")) $("lock").onclick = () => { unlocked = null; draw(); };
+  if ($("unlock")) $("unlock").onsubmit = async (e) => {
+    e.preventDefault();
+    $("msg").textContent = "Checking…";
+    try { unlocked = await decrypt(window.PRIVATE, $("unlock").querySelector("input").value); draw(); }
+    catch (err) { $("msg").textContent = "Nice try."; }
+  };
+}
+
 function drawLocked(tabId) {
     if (unlocked) {
         const path = (f) => f.name.replace(/\\/g, "/");
@@ -105,7 +126,7 @@ function drawLocked(tabId) {
     <div class="locked">
       <h4>Locked</h4>
       <p>${LOCKED[tabId]}</p>
-      <p class="muted">these are my write-ups and notes for the CTFs and assignments, which i'd love to share but i cant due to course policy so they're locked...unless you can guess the passphrase (you can't) and its not 'password'. feel free to look @ the notes + flashcards (more helpful!)</p>
+      <p class="muted">i'd love to share but i can't due to course policy so they're locked for only me to see...unless you can guess the passphrase (you can't) and its not 'password'.</p>
       ${window.PRIVATE ? `<form id="unlock">
         <input type="password" placeholder="Passphrase" autocomplete="current-password">
         <button class="btn dark">Unlock</button><span class="muted" id="msg"></span></form>` : ""}
@@ -129,17 +150,36 @@ async function decrypt(p, pass) {
 }
 
 function md(src) {
-  const out = []; let list = false, code = false, para = [];
-  const inline = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
-  const flush = () => { if (para.length) { out.push(`<p>${inline(para.join(" "))}</p>`); para = []; } if (list) { out.push("</ul>"); list = false; } };
+  const out = []; let list = null, code = false, para = [], table = null;
+  const inline = (t) => esc(t)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  const endList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  const endTable = () => { if (table) { out.push(table.join("") + "</table>"); table = null; } };
+  const flush = () => { if (para.length) { out.push(`<p>${inline(para.join(" "))}</p>`); para = []; } endList(); endTable(); };
   for (const line of src.split("\n")) {
     if (line.startsWith("```")) { flush(); out.push(code ? "</code></pre>" : "<pre><code>"); code = !code; continue; }
     if (code) { out.push(esc(line) + "\n"); continue; }
-    const h = line.match(/^#{1,3}\s+(.*)/), li = line.match(/^\s*[-*]\s+(.*)/);
+    const h = line.match(/^#{1,3}\s+(.*)/), ul = line.match(/^\s*[-*]\s+(.*)/), ol = line.match(/^\s*\d+[.)]\s+(.*)/);
+    const row = line.trim().startsWith("|") ? line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim()) : null;
+    if (row) {
+      if (para.length || list) { const t = table; table = null; flush(); table = t; }
+      if (row.every((c) => /^:?-{2,}:?$/.test(c))) continue;
+      if (!table) { table = ["<table>"]; table.push("<tr>" + row.map((c) => `<th>${inline(c)}</th>`).join("") + "</tr>"); }
+      else table.push("<tr>" + row.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>");
+      continue;
+    }
+    endTable();
     if (h) { flush(); out.push(`<h4>${inline(h[1])}</h4>`); }
-    else if (li) { if (para.length) flush(); if (!list) { out.push("<ul>"); list = true; } out.push(`<li>${inline(li[1])}</li>`); }
+    else if (ul || ol) {
+      const tag = ul ? "ul" : "ol";
+      if (para.length) { const p = para; para = []; out.push(`<p>${inline(p.join(" "))}</p>`); }
+      if (list !== tag) { endList(); out.push(`<${tag}>`); list = tag; }
+      out.push(`<li>${inline((ul || ol)[1])}</li>`);
+    }
+    else if (line.startsWith("> ")) { flush(); out.push(`<blockquote>${inline(line.slice(2))}</blockquote>`); }
     else if (!line.trim()) flush();
-    else { if (list) flush(); para.push(line); }
+    else { endList(); para.push(line); }
   }
   flush(); if (code) out.push("</code></pre>");
   return out.join("");
