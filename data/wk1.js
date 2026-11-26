@@ -109,7 +109,7 @@ CONTENT[1] = {
       ]
     ]
   },
-  "practice": {
+  "technical": {
     "notes": "<h4>Methodology</h4>\n<p>Prepare → Secure &amp; Seize → Preserve → Analyse → Report</p>\n<ul><li><b>Prepare:</b> kit, forms, legal authority</li><li><b>Secure &amp; Seize:</b> control the scene, photograph and record everything</li><li><b>Preserve:</b> make a verified forensic copy</li><li><b>Analyse:</b> work on the copy, never the original</li><li><b>Report:</b> explain findings so others can check them</li></ul>\n\n<h4>Chain of custody</h4>\n<p>Record who had the evidence, when, and what they did with it. Use a custody form, numbered tamper-evident bags, photos and notes. Any gap lets the other side claim tampering. The notebook is the most important item in the kit.</p>\n\n<h4>Devices that are switched on</h4>\n<ul><li><b>Desktop or laptop:</b> pull the plug (a normal shutdown writes more data)</li><li><b>Server:</b> proper shutdown (pulling the plug can corrupt databases)</li><li><b>Encrypted disk (e.g. BitLocker):</b> capture memory or a live image first, or the data may be locked for good</li><li><b>Phone:</b> Faraday bag, so it can't be remotely wiped</li></ul>\n\n<h4>Forensic images</h4>\n<p>A copy of every sector, including deleted and empty space. Connect the drive through a write blocker, because the OS writes to any drive you plug in.</p>\n<ul><li><b>DD (raw):</b> just the bytes. You record the hashes yourself.</li><li><b>E01:</b> the bytes plus case info, a checksum (CRC) per block, and the hash built in.</li></ul>\n\n<h4>Verification</h4>\n<p>Hash the source and the image. Matching hashes mean an identical copy. Don't leave the scene with an unverified image, and keep a second verified copy somewhere else.</p>",
     "cards": [
       [
