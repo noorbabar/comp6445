@@ -237,3 +237,10 @@ document.addEventListener("click", (e) => {
 window.addEventListener("scroll", hideTip);
 
 draw();
+
+{
+  const base = md;
+  md = (src) => src.split(/^:::answer[ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/m)
+    .map((p, i) => i % 2 ? `<details class="ans"><summary>Show answer</summary>${base(p)}</details>` : base(p))
+    .join("");
+}
